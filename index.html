@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>哲学家就餐 · 服务员解法</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #1e1e2f;
+            font-family: 'Segoe UI', 'Fira Code', monospace;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: #2d2d3a;
+            border: 1px solid #3c3c4a;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: #252532;
+            padding: 16px 24px;
+            border-bottom: 1px solid #3c3c4a;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.7rem;
+            color: #e2e8f0;
+        }
+        .header p {
+            margin: 8px 0 0;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        .main {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            padding: 24px;
+        }
+        .canvas-panel {
+            flex: 2;
+            min-width: 400px;
+            background: #1e1e2a;
+            border: 1px solid #3c3c4a;
+        }
+        .canvas-title {
+            padding: 12px 20px;
+            border-bottom: 1px solid #3c3c4a;
+            color: #cbd5e1;
+            font-weight: bold;
+        }
+        canvas {
+            display: block;
+            margin: 20px auto;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            width: 100%;
+            max-width: 480px;
+            aspect-ratio: 1/1;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 12px 20px;
+            background: #1e1e2a;
+            border-top: 1px solid #3c3c4a;
+            font-size: 0.8rem;
+        }
+        .legend span {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border: 1px solid #334155;
+        }
+        .gray { background: #94a3b8; }
+        .yellow { background: #facc15; }
+        .green { background: #2dd4bf; }
+        .stats-card {
+            flex: 1;
+            min-width: 260px;
+            background: #1e1e2a;
+            border: 1px solid #3c3c4a;
+            display: flex;
+            flex-direction: column;
+        }
+        .stats-title {
+            padding: 12px 20px;
+            border-bottom: 1px solid #3c3c4a;
+            color: #cbd5e1;
+            font-weight: bold;
+        }
+        .stats-content {
+            padding: 20px;
+            flex: 1;
+        }
+        .eat-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .eat-item {
+            background: #2d2d3a;
+            border: 1px solid #4a5b7a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+        }
+        .eat-item .name {
+            font-weight: bold;
+            color: #cbd5e1;
+        }
+        .eat-item .count {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #7dd3fc;
+        }
+        .fair-message {
+            background: #1e2a3a;
+            border-left: 3px solid #3b82f6;
+            padding: 12px;
+            font-size: 0.85rem;
+            color: #b9d3f0;
+            margin-top: 20px;
+        }
+        button {
+            background: #2c3e66;
+            border: 1px solid #4a5b7a;
+            color: #e2e8f0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            padding: 8px 20px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 12px;
+        }
+        button:hover {
+            background: #3b4e76;
+            border-color: #7c9bc0;
+        }
+        footer {
+            background: #1e1e2a;
+            border-top: 1px solid #3c3c4a;
+            text-align: center;
+            padding: 12px;
+            font-size: 0.7rem;
+            color: #6c7a8e;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🍽️ 哲学家就餐问题 · 服务员解法</h1>
+        <p>公平队列 (FIFO) + 全局互斥锁 | 随机思考/吃饭时长 | 无死锁无饥饿</p>
+    </div>
+    <div class="main">
+        <div class="canvas-panel">
+            <div class="canvas-title">📊 圆桌模拟状态</div>
+            <canvas id="diningCanvas" width="500" height="500"></canvas>
+            <div class="legend">
+                <div><span class="gray"></span> 思考</div>
+                <div><span class="yellow"></span> 等待(饥饿)</div>
+                <div><span class="green"></span> 吃饭</div>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-title">📈 吃饭次数统计</div>
+            <div class="stats-content">
+                <div class="eat-grid" id="eatStats"></div>
+                <div class="fair-message" id="fairMsg">
+                    ✅ 服务员解法保证公平，所有哲学家最终次数相近
+                </div>
+                <button id="resetBtn">⟳ 重置模拟</button>
+            </div>
+        </div>
+    </div>
+    <footer>每位哲学家随机思考0.8~2.5秒，随机吃饭0.6~1.8秒 | 状态每200ms刷新</footer>
+</div>
+
+<script>
+    const canvas = document.getElementById('diningCanvas');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width, height = canvas.height;
+    const centerX = width/2, centerY = height/2;
+    const radius = 170;
+    const names = ['P0', 'P1', 'P2', 'P3', 'P4'];
+
+    let currentStates = [0, 0, 0, 0, 0];
+    let currentEats = [0, 0, 0, 0, 0];
+
+    const stateColor = {
+        0: '#94a3b8',   // 思考 灰色
+        1: '#facc15',   // 等待 黄色
+        2: '#2dd4bf'    // 吃饭 绿色
+    };
+
+    function draw() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, width, height);
+
+        // 圆桌
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius + 10, 0, 2 * Math.PI);
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fill();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // 筷子 (静态表示，不显示占用状态)
+        for (let i = 0; i < 5; i++) {
+            let angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            let x1 = centerX + (radius - 18) * Math.cos(angle);
+            let y1 = centerY + (radius - 18) * Math.sin(angle);
+            let x2 = centerX + (radius + 12) * Math.cos(angle);
+            let y2 = centerY + (radius + 12) * Math.sin(angle);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#64748b';
+            ctx.stroke();
+            ctx.fillStyle = '#334155';
+            ctx.font = "10px monospace";
+            ctx.fillText(i, (x1 + x2) / 2 - 4, (y1 + y2) / 2 - 4);
+        }
+
+        // 哲学家
+        for (let i = 0; i < 5; i++) {
+            let angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+            let x = centerX + (radius - 12) * Math.cos(angle);
+            let y = centerY + (radius - 12) * Math.sin(angle);
+            let color = stateColor[currentStates[i]] || '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(x, y, 24, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = '#0f172a';
+            ctx.font = "bold 14px monospace";
+            ctx.fillText(names[i], x - 12, y + 6);
+            ctx.font = "10px monospace";
+            ctx.fillStyle = '#1e293b';
+            ctx.fillText(currentEats[i], x - 8, y - 12);
+        }
+
+        ctx.fillStyle = '#334155';
+        ctx.font = "10px monospace";
+        ctx.fillText("服务员调度 | 公平队列", 20, 40);
+    }
+
+    function updateStatsUI() {
+        const container = document.getElementById('eatStats');
+        let html = '';
+        for (let i = 0; i < 5; i++) {
+            html += `
+                <div class="eat-item">
+                    <span class="name">${names[i]}</span>
+                    <span class="count">${currentEats[i]}</span>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+
+        const maxEat = Math.max(...currentEats);
+        const minEat = Math.min(...currentEats);
+        const msgDiv = document.getElementById('fairMsg');
+        if (maxEat - minEat <= 2) {
+            msgDiv.innerHTML = '✅ 公平队列生效：所有哲学家吃饭次数几乎相等，无饥饿！';
+            msgDiv.style.borderLeftColor = '#3b82f6';
+        } else if (maxEat - minEat <= 8) {
+            msgDiv.innerHTML = `📊 运行中，最大差距 ${maxEat - minEat} 次，服务员解法将持续拉平差距。`;
+            msgDiv.style.borderLeftColor = '#facc15';
+        } else {
+            msgDiv.innerHTML = `⚠️ 暂时差距 ${maxEat - minEat} 次，公平队列会逐渐平衡，耐心观察。`;
+            msgDiv.style.borderLeftColor = '#f97316';
+        }
+    }
+
+    async function fetchStatus() {
+        try {
+            const res = await fetch('/status');
+            const data = await res.json();
+            currentStates = data.philosophers;
+            currentEats = data.eat_counts;
+            draw();
+            updateStatsUI();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function resetSimulation() {
+        try {
+            await fetch('/reset');
+            // 稍等后端重启线程
+            setTimeout(() => fetchStatus(), 200);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // 每200ms轮询状态
+    setInterval(fetchStatus, 200);
+    fetchStatus();
+
+    document.getElementById('resetBtn').addEventListener('click', resetSimulation);
+</script>
+</body>
+</html>
